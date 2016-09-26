@@ -1,4 +1,5 @@
 #!/bin/sh
+
 main_switch () {
   ACTION="$1"
   shift
@@ -32,18 +33,19 @@ print_usage () {
 deps () {
   printf "\nDownload the openvpn files to /etc/openvpn and add your secrets\s"
   set -x
-  pacman -S --needed hostapd dhcpcd haveged
+  #pacman -S --needed hostapd dhcpcd haveged
+  apt-get install hostapd isc-dhcp-server haveged
   systemctl enable hostapd
   systemctl enable haveged
   systemctl start haveged
   mkdir -p /etc/hostapd
   ln -s "$PWD/hostapd.conf" /etc/hostapd
-  ln -s "$PWD/dhcpd.conf" /etc/dhcpd.conf
+  ln -s "$PWD/dhcpd.conf" /etc/dhcp/dhcpd.conf
 }
 
 
 init () {
-  WLAN="wlo1"
+  WLAN="wlan0"
   [ -n "$1" ] && WLAN="$1"
 
   iptables-restore iptables.save
@@ -53,16 +55,17 @@ init () {
   echo 0 > /proc/sys/net/ipv4/conf/$WLAN/send_redirects
 
   systemctl restart hostapd
-  systemctl restart dhcpd4
 
   ip link set "$WLAN" type wlan
   ifconfig "$WLAN" 192.168.25.1 netmask 255.255.255.0
   ip link set "$WLAN" up
+
+  systemctl restart isc-dhcp-server
 }
 kill () {
   pkill hostapd
   systemctl stop hostapd
-  systemctl stop dhcpd4
+  systemctl stop isc-dhcp-server
 }
 restart () {
   set -x
