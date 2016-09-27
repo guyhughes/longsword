@@ -33,14 +33,15 @@ print_usage () {
 deps () {
   printf "\nDownload the openvpn files to /etc/openvpn and add your secrets\s"
   set -x
-  #pacman -S --needed hostapd dhcpcd haveged
   apt-get install hostapd isc-dhcp-server haveged
   systemctl enable hostapd
   systemctl enable haveged
   systemctl start haveged
   mkdir -p /etc/hostapd
-  ln -s "$PWD/hostapd.conf" /etc/hostapd
+  rm -f /etc/hostapd/hostapd.conf /etc/dhcp/dhcpd.conf /etc/default/isc-default-server
+  ln -s "$PWD/hostapd.conf" /etc/hostapd/hostapd.conf
   ln -s "$PWD/dhcpd.conf" /etc/dhcp/dhcpd.conf
+  ln -s "$PWD/isc-dhcp-server" /etc/default/isc-default-server
 }
 
 
@@ -49,7 +50,7 @@ init () {
   [ -n "$1" ] && WLAN="$1"
 
   iptables-restore iptables.save
-  sysctl -w net.ipv4.ip_forward=1 &>/dev/null
+  sysctl -w net.ipv4.ip_forward=1 2>&1 >/dev/null
 
   #transparent proxying on $WLAN assuming the clients have custom gateway set, disable ICMP redirects
   echo 0 > /proc/sys/net/ipv4/conf/$WLAN/send_redirects
@@ -69,7 +70,7 @@ kill () {
 }
 restart () {
   set -x
-  pkill -USR1 openpvn
+  pkill -USR1 openvpn
   set +x
   init "$@"
 }
